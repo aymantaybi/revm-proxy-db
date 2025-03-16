@@ -1,7 +1,14 @@
+use std::{
+    fs::File,
+    io::{Read, Write},
+};
+
 use revm::{
+    db::{CacheDB, EmptyDB},
     primitives::{AccountInfo, Address, Bytecode, B256, U256},
     DatabaseRef,
 };
+use serde::de::DeserializeOwned;
 use tokio::sync::mpsc::UnboundedSender;
 
 #[derive(Debug)]
@@ -74,4 +81,34 @@ where
     fn block_hash_ref(&self, number: u64) -> Result<B256, Self::Error> {
         self.db.block_hash_ref(number)
     }
+}
+
+pub fn save_cache_db_to_file<ExtDB>(path: String, cache_db: &CacheDB<ExtDB>) -> eyre::Result<()> {
+    let CacheDB {
+        accounts,
+        contracts,
+        ..
+    } = cache_db;
+    let db = CacheDB {
+        accounts: accounts.clone(),
+        contracts: contracts.clone(),
+        logs: Default::default(),
+        block_hashes: Default::default(),
+        db: EmptyDB::new(),
+    };
+    let json = serde_json::to_string(&db)?;
+    let mut file = File::create(path)?;
+    file.write_all(json.as_bytes())?;
+    Ok(())
+}
+
+pub fn load_cache_db_from_file<ExtDB>(path: String) -> eyre::Result<CacheDB<ExtDB>>
+where
+    ExtDB: DeserializeOwned,
+{
+    let mut file = File::open(path)?;
+    let mut json = String::new();
+    let _ = file.read_to_string(&mut json)?;
+    let cache_db = serde_json::from_str::<CacheDB<ExtDB>>(&json)?;
+    Ok(cache_db)
 }
