@@ -1,0 +1,8 @@
+[package]
+name = "revm-proxy-db"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+revm = { version = "19.0", default-features = false, features = ["alloydb", "dev", "serde"] }
+tokio = { version = "1.43.0", features = ["full"] }
